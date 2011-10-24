@@ -1,6 +1,6 @@
 #!/bin/sh
-# pdl-steam.sh (0.59)
-# Copyright (c) 2008-2011 byteframe@primarydataloop
+# pdl-steam.sh (0.60)
+# Copyright (c) 2008-2011 primarydataloop
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -14,6 +14,13 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>
+
+# change the pwd to the location of the script
+DIR="$( cd "$( dirname "$0" )" && pwd )"
+if [ -L "${DIR}" ]; then
+  DIR=$(readlink "${DIR}")
+fi
+cd "${DIR}"
 
 function backup_database()
 {
@@ -529,12 +536,6 @@ function steam_stop()
   fi
   rm -f pdl-steam.pid
 }
-
-DIR="$( cd "$( dirname "$0" )" && pwd )"
-if [ -L "${DIR}" ]; then
-  DIR=$(readlink "${DIR}")
-fi
-cd "${DIR}"
 
 case ${1} in
 start)
