@@ -1,5 +1,5 @@
 #!/bin/sh
-# pdl-steam.sh (0.60)
+# pdl-steam.sh (0.61)
 # Copyright (c) 2008-2011 primarydataloop
 
 # This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,6 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>
 
-# change the pwd to the location of the script
 DIR="$( cd "$( dirname "$0" )" && pwd )"
 if [ -L "${DIR}" ]; then
   DIR=$(readlink "${DIR}")
@@ -444,7 +443,7 @@ function steam_start()
     chmod 444 ${GAMEDIR}/*.tar.gz
 
     # assemble configuration
-    ln -sf "${DIR}"/configs/autoexec.cfg ${GAMEDIR}/${CFGDIR}
+    cp configs/autoexec.cfg ${GAMEDIR}/${CFGDIR}
     ln -sf "${DIR}"/configs/bans.cfg ${GAMEDIR}/${CFGDIR}/${BANFILE}
     {
       echo "exec ${BANFILE}"
@@ -459,13 +458,17 @@ function steam_start()
     cp ${PCFG}.def ${PCFG}
     CFGS[$x]=$(echo ${CFGS[$x]} | sed -e "s/.cfg/ /g")
     for FILE in ${CFGS[$x]}; do
+      if [ ${FILE} = autoexec ]; then
+        echo "warning: autoexec.cfg is a reserved filename; skipping"
+        continue;
+      fi
       if [ ${FILE} = server ]; then
-        echo "warning: server.cfg is a reserved filename"
+        echo "warning: server.cfg is a reserved filename; skipping"
         continue;
       fi
       if [ ${FILE:0:1} = + ]; then
         FILE=${FILE:1}
-        EXEC="${EXEC}+exec ${FILE}.cfg "
+        echo "exec ${FILE}.cfg" >> ${GAMEDIR}/${CFGDIR}/autoexec.cfg
       elif [ ${FILE:0:1} = @ ]; then
         FILE=${FILE:1}
         echo "exec ${FILE}.cfg" >> ${GAMEDIR}/${CFGDIR}/server.cfg
@@ -479,6 +482,7 @@ function steam_start()
       fi
       ln -s "${DIR}"/configs/${FILE}.cfg ${GAMEDIR}/${CFGDIR}
     done
+    chmod 700 ${GAMEDIR}/${CFGDIR}
     if [ ! -e ${GAMEDIR}/mapcycle.txt.def ]; then
       cp ${GAMEDIR}/mapcycle.txt ${GAMEDIR}/mapcycle.txt.def
     fi
@@ -514,7 +518,7 @@ function steam_start()
     ( cd ${SERV[$x]}/${OB}
       screen -dmS steam_${NAME[$x]} ./${SERV[$x]}_run -steambin "${STEAM_BIN}" \
         -autoupdate +ip 0.0.0.0 -port ${PORT[$x]} -game ${GAME[$x]} \
-        ${OPTS[$x]} ${EXEC} +sv_lan 0 +map ${STARTMAP}
+        ${OPTS[$x]} +sv_lan 0 +map ${STARTMAP}
     )
     echo "starting ${GAME[$x]} server ${NAME[$x]}..."
   done

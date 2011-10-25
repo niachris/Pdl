@@ -63,8 +63,9 @@ translation file (*.phrases.txt'), also place it in the 'plugins' directory.
 If the target is a directory, the directory structure and all contents will be
 symlinked at the game directory.
 
-One hlstatsx instance (consisting of the perl daemon and access to a database)
-is run for all game servers. It responds to the following variables:
+One hlstatsx instance (which is the perl daemon running on localhost with access
+to a database) is run for all game servers. It responds to the following
+variables:
 
 [DB_HOST]
   network host for the database server (default: localhost)
@@ -75,11 +76,10 @@ is run for all game servers. It responds to the following variables:
 [DB_PASS]
   password for the database (default: hlstatsx)
 
-The hlstatsx daemon will run on localhost. The cfg file name 'server.cfg' is
-reserved for the hlstatsx log cvars, and cannot be used as an element of $CFGS.
 A number of installation and upgrade operations for hlstatsx will need to be
-performed manually, and the user is prompted. In addition, a backup of the
-database will be performed weekly or before an upgrade of hlstatsx.
+performed manually, and so the user is prompted. In addition, a backup of the
+database and an update of geoip data will be performed weekly, or before an
+hlstatsx upgrade.
 
 Server definitions with a port or game already specified for another server will
 be skipped. Configuration files and hlstatsx backups are kept protected from
