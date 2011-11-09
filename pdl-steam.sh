@@ -1,5 +1,5 @@
 #!/bin/sh
-# pdl-steam.sh (0.61)
+# pdl-steam.sh (0.62)
 # Copyright (c) 2008-2011 primarydataloop
 
 # This program is free software: you can redistribute it and/or modify
@@ -365,7 +365,7 @@ function steam_start()
         wget -nv www.sourcemm.net/vdf?vdf_game=${GAME[$x]} \
           -O ${GAMEDIR}/addons/metamod.vdf || exit 1
       fi
-      SM=1.3.8
+      SM=1.4.0
       PCFG=${GAMEDIR}/cfg/sourcemod/sourcemod.cfg
       if [ ! -e ${GAMEDIR}/sourcemod-${SM}-linux.tar.gz ]; then
         rm -f ${GAMEDIR}/sourcemod-*-linux.tar.gz
@@ -378,6 +378,7 @@ function steam_start()
           ${GAMEDIR}/addons/sourcemod/configs/admins_simple.ini.def
         cp ${GAMEDIR}/addons/sourcemod/configs/admin_overrides.cfg \
           ${GAMEDIR}/addons/sourcemod/configs/admin_overrides.cfg.def
+        echo "USE THE HLSTATSX WEB GUI TO DO THE FOLLOWING AND HIT [ENTER]"
         echo "(web) unhide game ${GAME[$x]}"
         echo "(web) add ${SERV[$x]} server for ${GAME[$x]}"
         read PAUSE
@@ -415,10 +416,10 @@ function steam_start()
           echo "warning: plugins/${FILE}.smx not found"
         fi
       done
-      sed -i -e "s/Logging\"\t\t\"On\"/Logging\"\t\t\"Off\"/" \
+      sed -i -e "s/Logging\"\t\t\"on\"/Logging\"\t\t\"off\"/" \
         ${GAMEDIR}/addons/sourcemod/configs/core.cfg
       if [ ${DBUG[$x]} = yes ]; then
-        sed -i -e "s/Logging\"\t\t\"Off\"/Logging\"\t\t\"On\"/" \
+        sed -i -e "s/Logging\"\t\t\"off\"/Logging\"\t\t\"on\"/" \
           ${GAMEDIR}/addons/sourcemod/configs/core.cfg
       fi
 
