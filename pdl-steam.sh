@@ -1,5 +1,5 @@
 #!/bin/sh
-# pdl-steam.sh (0.62)
+# pdl-steam.sh (0.63)
 # Copyright (c) 2008-2011 primarydataloop
 
 # This program is free software: you can redistribute it and/or modify
@@ -170,14 +170,14 @@ function steam_start()
   USED_HGAM=,
   USED_SGAM=,
 
-  # process each server definition
+  # process server definitions
   for ((x=0; x < ${#NAME[*]}; x++)); do
     if [ -z ${NAME[$x]} ]; then
       echo "error: empty \$NAME"
       continue
     fi
-    NAME[$x]=$(echo ${NAME} | sed -e "s/ /_/g")
-    if [[ ${USED_NAME} == *${NAME[$x]}* ]]; then
+    NAME[$x]=$(echo ${NAME[$x]} | sed -e "s/ /_/g" -e "s/,/ /g")
+    if [[ ${USED_NAME} == *,${NAME[$x]},* ]]; then
       echo "error: name in use, skipping: ${NAME[$x]}"
       continue
     fi
@@ -189,7 +189,7 @@ function steam_start()
       echo "error: missing \$PORT, skipping: ${NAME[$x]}"
       continue
     fi
-    if [[ ${USED_PORT} == *${PORT[$x]}* ]]; then
+    if [[ ${USED_PORT} == *,${PORT[$x]},* ]]; then
       echo "error: port ${PORT[$x]} in use, skipping: ${NAME[$x]}"
       continue
     fi
@@ -200,7 +200,7 @@ function steam_start()
     unset EXEC FIRST_RUN
 
     if [ ${SERV[$x]} = hlds ]; then
-      if [[ ${USED_HGAM} == *${GAME[$x]}* ]]; then
+      if [[ ${USED_HGAM} == *,${GAME[$x]},* ]]; then
         echo "error: a ${GAME[$x]} server is already up, skipping: ${NAME[$x]}"
         continue
       fi
@@ -312,7 +312,7 @@ function steam_start()
       USED_HGAM=${USED_HGAM}${GAME[$x]},
       echo "logaddress_add ${IP} 27500" > ${GAMEDIR}/server.cfg
     elif [ ${SERV[$x]} = srcds ]; then
-      if [[ ${USED_SGAM} == *${GAME[$x]}* ]]; then
+      if [[ ${USED_SGAM} == *,${GAME[$x]},* ]]; then
         echo "error: a ${GAME[$x]} server is already up, skipping: ${NAME[$x]}"
         continue
       fi
