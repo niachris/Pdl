@@ -1,5 +1,5 @@
 #!/bin/sh
-# pdl-steam.sh (0.63)
+# pdl-steam.sh (0.64)
 # Copyright (c) 2008-2011 primarydataloop
 
 # This program is free software: you can redistribute it and/or modify
@@ -48,7 +48,6 @@ function steam_start()
   fi
   source ./pdl-steam.conf || exit 1
   chmod 600 pdl-steam.conf
-  touch pdl-steam.pid
   mkdir -p configs hlstatsx plugins
   chmod 700 configs
   if [ ! -e configs/autoexec.cfg ]; then
@@ -57,10 +56,11 @@ function steam_start()
   if [ ! -e configs/bans.cfg ]; then
     echo -e "// bans.cfg\n" > configs/bans.cfg
   fi
+  touch pdl-steam.pid
 
+  # install/update hlstatsx
   HLX=1.6.14
   if [ ! -e hlstatsx/HLXCommunityEdition${HLX}FULL.zip ]; then
-    # install/update hlstatsx
     if [ -e hlstatsx/HLXCommunityEdition*FULL.zip ]; then
       OLD_HLX=yes
     fi
@@ -162,38 +162,33 @@ function steam_start()
   ./steam -command list > /dev/null 2>&1
   STEAM_BIN="${DIR}"/steam
 
-  # get default ip address, and initalize in-use lists
+  # get default ip address
   IP=$(/sbin/ifconfig eth0 | \
     sed -n "/^[A-Za-z0-9]/ {N;/dr:/{;s/.*dr://;s/ .*//;p;}}")
+
+  # process server definitions
   USED_NAME=,
   USED_PORT=,
   USED_HGAM=,
   USED_SGAM=,
-
-  # process server definitions
   for ((x=0; x < ${#NAME[*]}; x++)); do
+    NAME[$x]=$(echo ${NAME[$x]} | sed -e "s/ /_/g" -e "s/,/ /g")
     if [ -z ${NAME[$x]} ]; then
       echo "error: empty \$NAME"
       continue
-    fi
-    NAME[$x]=$(echo ${NAME[$x]} | sed -e "s/ /_/g" -e "s/,/ /g")
-    if [[ ${USED_NAME} == *,${NAME[$x]},* ]]; then
+    elif [[ ${USED_NAME} == *,${NAME[$x]},* ]]; then
       echo "error: name in use, skipping: ${NAME[$x]}"
       continue
-    fi
-    if [ -z ${SERV[$x]} ]; then
+    elif [ -z ${SERV[$x]} ]; then
       echo "error: missing \$SERV, skipping: ${NAME[$x]}"
       continue
-    fi
-    if [ -z ${PORT[$x]} ]; then
+    elif [ -z ${PORT[$x]} ]; then
       echo "error: missing \$PORT, skipping: ${NAME[$x]}"
       continue
-    fi
-    if [[ ${USED_PORT} == *,${PORT[$x]},* ]]; then
+    elif [[ ${USED_PORT} == *,${PORT[$x]},* ]]; then
       echo "error: port ${PORT[$x]} in use, skipping: ${NAME[$x]}"
       continue
-    fi
-    if [ -z ${GAME[$x]} ]; then
+    elif [ -z ${GAME[$x]} ]; then
       echo "error: missing \$GAME, skipping: ${NAME[$x]}"
       continue
     fi
@@ -494,7 +489,6 @@ function steam_start()
     ln -sf "${DIR}"/configs/${NAME[$x]}-mapcycle.txt ${GAMEDIR}/mapcycle.txt
     read -r STARTMAP < ${GAMEDIR}/mapcycle.txt
     if [ ! -z "${MOTD[$x]}" ]; then
-      # TODO: hlds might need frameset/redirect; can't test while wine bug 6095
       echo "${MOTD[$x]}" > ${GAMEDIR}/motd.txt
     else
       echo "warning: motd url not specified; using mapcycle as greeting"
