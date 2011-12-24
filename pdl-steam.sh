@@ -1,5 +1,5 @@
 #!/bin/sh
-# pdl-steam.sh (0.64)
+# pdl-steam.sh (0.65)
 # Copyright (c) 2008-2011 primarydataloop
 
 # This program is free software: you can redistribute it and/or modify
@@ -33,7 +33,7 @@ function backup_database()
 function steam_start()
 {
   # startup checks
-  for DEP in screen mysql wget; do
+  for DEP in screen sudo mysql wget; do
     if ! which ${DEP} > /dev/null 2>&1; then
       echo "${DEP} not installed"
       exit 1
@@ -59,7 +59,7 @@ function steam_start()
   touch pdl-steam.pid
 
   # install/update hlstatsx
-  HLX=1.6.14
+  HLX=1.6.15
   if [ ! -e hlstatsx/HLXCommunityEdition${HLX}FULL.zip ]; then
     if [ -e hlstatsx/HLXCommunityEdition*FULL.zip ]; then
       OLD_HLX=yes
@@ -68,39 +68,46 @@ function steam_start()
     wget hlstatsxcommunity.googlecode.com/files/HLXCommunityEdition${HLX}FULL.zip \
       -O hlstatsx/HLXCommunityEdition${HLX}FULL.zip || exit 1
     unzip -q hlstatsx/HLXCommunityEdition${HLX}FULL.zip -d hlstatsx
-    cp hlstatsx/sourcemod/plugins/hlstatsx.smx plugins
-    chmod 444 hlstatsx/HLXCommunityEdition${HLX}FULL.zip
+  fi
+  chmod 444 hlstatsx/HLXCommunityEdition${HLX}FULL.zip
+  cp hlstatsx/sourcemod/plugins/hlstatsx.smx plugins
 
-    # configure hlstatsx
-    sed -i -e "s/^DBHost \"\"/DBHost \"${DB_HOST}\"/" \
-      -e "s/^DBUsername \"\"/DBUsername \"${DB_USER}\"/" \
-      -e "s/^DBPassword \"\"/DBPassword \"${DB_PASS}\"/" \
-      -e "s/^DBName \"\"/DBName \"${DB_NAME}\"/" \
-      hlstatsx/scripts/hlstats.conf
-    chmod 600 hlstatsx/scripts/hlstats.conf
-    sed -i -e "s/(\"DB_ADDR\", \"localhost\");/(\"DB_ADDR\", \"\");/" \
-      -e "s/(\"DB_ADDR\", \"\");/(\"DB_ADDR\", \"${DB_HOST}\");/" \
-      -e "s/(\"DB_NAME\", \"\");/(\"DB_NAME\", \"${DB_NAME}\");/" \
-      -e "s/(\"DB_USER\", \"\");/(\"DB_USER\", \"${DB_USER}\");/" \
-      -e "s/(\"DB_PASS\", \"\");/(\"DB_PASS\", \"${DB_PASS}\");/" \
-      hlstatsx/web/config.php
-    chmod 660 hlstatsx/web/config.php
-    sed -i -e "s/DBHOST=\"localhost\"/DBHOST=\"\"/" \
-      -e "s/DBHOST=\"\"/DBHOST=\"${DB_HOST}\"/" \
-      -e "s/DBNAME=\"\"/DBNAME=\"${DB_NAME}\"/" \
-      -e "s/DBUSER=\"\"/DBUSER=\"${DB_USER}\"/" \
-      -e "s/DBPASS=\"\"/DBPASS=\"${DB_PASS}\"/" \
-      hlstatsx/scripts/GeoLiteCity/GeoLite_Import.sh
-    sed -i -e "s/\$( date +%m )/0\$((\`date +%m|sed \"s\/^0\/\/\"\`-1))/" \
-      hlstatsx/scripts/GeoLiteCity/GeoLite_Import.sh
-    chmod 700 hlstatsx/scripts/GeoLiteCity/GeoLite_Import.sh
+  # configure hlstatsx
+  sed -i -e "s/^DBHost \".*\"/DBHost \"${DB_HOST}\"/" \
+    -e "s/^DBUsername \".*\"/DBUsername \"${DB_USER}\"/" \
+    -e "s/^DBPassword \".*\"/DBPassword \"${DB_PASS}\"/" \
+    -e "s/^DBName \".*\"/DBName \"${DB_NAME}\"/" \
+    hlstatsx/scripts/hlstats.conf
+  chmod 600 hlstatsx/scripts/hlstats.conf
+  sed -i -e "s/DBHOST=\".*\"/DBHOST=\"\"/" \
+    -e "s/DBHOST=\".*\"/DBHOST=\"${DB_HOST}\"/" \
+    -e "s/DBNAME=\".*\"/DBNAME=\"${DB_NAME}\"/" \
+    -e "s/DBUSER=\".*\"/DBUSER=\"${DB_USER}\"/" \
+    -e "s/DBPASS=\".*\"/DBPASS=\"${DB_PASS}\"/" \
+    hlstatsx/scripts/GeoLiteCity/GeoLite_Import.sh
+  sed -i -e "s/^TODAY_MONTH=\$( date +%m )/let &-1/" \
+    hlstatsx/scripts/GeoLiteCity/GeoLite_Import.sh
+  chmod 700 hlstatsx/scripts/GeoLiteCity/GeoLite_Import.sh
+  cp hlstatsx/web/config.php hlstatsx/web/config.php.tmp
+  sed -e "s/(\"DB_ADDR\", \".*\");/(\"DB_ADDR\", \"${DB_HOST}\");/" \
+    -e "s/(\"DB_NAME\", \".*\");/(\"DB_NAME\", \"${DB_NAME}\");/" \
+    -e "s/(\"DB_USER\", \".*\");/(\"DB_USER\", \"${DB_USER}\");/" \
+    -e "s/(\"DB_PASS\", \".*\");/(\"DB_PASS\", \"${DB_PASS}\");/" \
+    hlstatsx/web/config.php.tmp > hlstatsx/web/config.php
+  rm hlstatsx/web/config.php.tmp
+  chmod 640 hlstatsx/web/config.php
 
-    # create/update hlstatsx database
-    if [ -z ${OLD_HLX} ]; then
+  # update/create hlstatsx database
+  if [ -d hlstatsx/web/updater ]; then
+    if [ ! -z ${OLD_HLX} ]; then
+      backup_database
+      echo "UPDATE DB AT 'http://<webserver>/hlstatsx/updater' AND HIT [ENTER]"
+      read PAUSE
+      rm -fr hlstatsx/web/updater
+    else
       echo "INPUT MYSQL ROOT PASSWORD:"
       read -s MYSQL_PASS
-      mysql -h ${DB_HOST} -u root -p${MYSQL_PASS} \
-        -e "CREATE DATABASE ${DB_NAME}"
+      mysql -h ${DB_HOST} -u root -p${MYSQL_PASS} -e "CREATE DATABASE ${DB_NAME}"
       mysql -h ${DB_HOST} -u root -p${MYSQL_PASS} ${DB_NAME} \
         < hlstatsx/sql/install.sql
       mysql -h ${DB_HOST} -u root -p${MYSQL_PASS} -e \
@@ -110,26 +117,29 @@ function steam_start()
       rm -fr hlstatsx/web/updater
       sh hlstatsx/scripts/GeoLiteCity/GeoLite_Import.sh
       echo "DO THE FOLLOWING MANUALLY AND HIT [ENTER]"
-      echo "(root) ln -s ${DIR}/hlstatsx/web /var/www/htdocs/hlstatsx"
-      echo "(root) chown -R ${USER}:apache ${DIR}/hlstatsx/web"
       echo "(web) change admin pw from the default \"123456\""
       echo "(web) set to geoip lookup via database"
       read PAUSE
-    else
-      backup_database
-      echo "UPDATE DB AT 'http://<webserver>/hlstatsx/updater' AND HIT [ENTER]"
-      read PAUSE
-      rm -fr hlstatsx/web/updater
     fi
-
-    # add/update hlstatsx awards crontab entry
-    if [ -z "$(crontab -l)" ]; then
-      echo hlstat | crontab -
-    fi
-    crontab -l | sed -e \
-      's!.*hlstat.*!00 00 * * * cd '${DIR}'/hlstatsx/scripts \&\& ./hlstats-awards.pl!' \
-      | crontab -
   fi
+
+  # handle web link and permissions
+  if [ ! -e /var/www/htdocs/hlstatsx ]; then
+    echo "ENTER ROOT PASSWORD TO CREATE HLSTATSX WEB LINK"
+    sudo ln -s ${DIR}/hlstatsx/web /var/www/htdocs/hlstatsx
+  fi
+  if [ $(stat -c %G hlstatsx/web/config.php) != apache ] ; then
+    echo "ENTER ROOT PASSWORD TO PROTECT HLSTATSX WEB CONFIGURATION"
+    sudo chown ${USER}:apache ${DIR}/hlstatsx/web/config.php
+  fi
+
+  # add/update hlstatsx awards crontab entry
+  if [ -z "$(crontab -l)" ]; then
+    echo hlstat | crontab -
+  fi
+  crontab -l | sed -e \
+    's!.*hlstat.*!00 00 * * * cd '${DIR}'/hlstatsx/scripts \&\& ./hlstats-awards.pl!' \
+    | crontab -
 
   # backup hlstatsx database weekly
   if [ ! -z $(find hlstatsx -name 20*_backup.sql -mtime +7) ]; then
@@ -142,6 +152,9 @@ function steam_start()
     sh hlstatsx/scripts/GeoLiteCity/GeoLite_Import.sh > /dev/null 2>&1
     touch hlstatsx/scripts/GeoLiteCity/GeoLite_Import.sh
   fi
+
+  # clean hlstatsx logs
+  rm -f hlstatsx/scripts/logs/*
 
   # start hlstatsx daemon
   if [ -e hlstatsx/scripts/run_hlstats ]; then
@@ -360,11 +373,11 @@ function steam_start()
         wget -nv www.sourcemm.net/vdf?vdf_game=${GAME[$x]} \
           -O ${GAMEDIR}/addons/metamod.vdf || exit 1
       fi
-      SM=1.4.0
+      SM=1.4.1
       PCFG=${GAMEDIR}/cfg/sourcemod/sourcemod.cfg
       if [ ! -e ${GAMEDIR}/sourcemod-${SM}-linux.tar.gz ]; then
         rm -f ${GAMEDIR}/sourcemod-*-linux.tar.gz
-        wget -nv www.n00bsalad.net/sourcemodmirror/sourcemod-${SM}-linux.tar.gz \
+        wget www.n00bsalad.net/sourcemodmirror/sourcemod-${SM}-linux.tar.gz \
           -O ${GAMEDIR}/sourcemod-${SM}-linux.tar.gz || exit 1
         rm -fr ${GAMEDIR}/cfg/sourcemod ${GAMEDIR}/addons/sourcemod
         tar -xzf ${GAMEDIR}/sourcemod-${SM}-linux.tar.gz -C ${GAMEDIR}
@@ -431,7 +444,7 @@ function steam_start()
       fi
       ln -sf "${DIR}"/configs/${NAME[$x]}-motd_text.txt ${GAMEDIR}/motd_text.txt
     else
-      echo "error: \"${SERV[$x]}\" is not a valid server type"
+      echo "error: \"${SERV[$x]}\" is not a valid server type, skipping"
       continue
     fi
 
@@ -455,12 +468,12 @@ function steam_start()
     CFGS[$x]=$(echo ${CFGS[$x]} | sed -e "s/.cfg/ /g")
     for FILE in ${CFGS[$x]}; do
       if [ ${FILE} = autoexec ]; then
-        echo "warning: autoexec.cfg is a reserved filename; skipping"
-        continue;
+        echo "warning: autoexec.cfg is a reserved filename, skipping"
+        continue
       fi
       if [ ${FILE} = server ]; then
-        echo "warning: server.cfg is a reserved filename; skipping"
-        continue;
+        echo "warning: server.cfg is a reserved filename, skipping"
+        continue
       fi
       if [ ${FILE:0:1} = + ]; then
         FILE=${FILE:1}
@@ -497,8 +510,8 @@ function steam_start()
 
     # start server
     if [ ! -z ${FIRST_RUN} ]; then
-      echo "this is the first time server '${NAME[$x]}' will be started"
-      echo "add/modify any configuration in 'configs' and hit [ENTER]"
+      echo "this is the first time server '${NAME[$x]}' will be started."
+      echo "add/modify relevant configuration in 'configs' and hit [ENTER]"
       read PAUSE
     fi
     USED_NAME=${USED_NAME}${NAME[$x]},
@@ -510,6 +523,7 @@ function steam_start()
     else
       rm -f ${GAMEDIR}/logs/* ${GAMEDIR}/addons/{amxmodx,sourcemod}/logs/*
     fi
+    rm -f ${GAMEDIR}/downloads/*
     ( cd ${SERV[$x]}/${OB}
       screen -dmS steam_${NAME[$x]} ./${SERV[$x]}_run -steambin "${STEAM_BIN}" \
         -autoupdate +ip 0.0.0.0 -port ${PORT[$x]} -game ${GAME[$x]} \
