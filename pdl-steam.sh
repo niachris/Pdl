@@ -1,5 +1,5 @@
 #!/bin/sh
-# pdl-steam.sh (0.65)
+# pdl-steam.sh (0.66)
 # Copyright (c) 2008-2011 primarydataloop
 
 # This program is free software: you can redistribute it and/or modify
@@ -279,17 +279,17 @@ function steam_start()
       fi
 
       # assemble amxmodx data
-      if [ ! -e configs/${NAME[$x]}-admins.ini ]; then
+      if [ ! -e configs/${NAME[$x]}_admins.ini ]; then
         cp -v ${GAMEDIR}/addons/amxmodx/configs/users.ini.def \
-          configs/${NAME[$x]}-admins.ini
+          configs/${NAME[$x]}_admins.ini
       fi
-      if [ ! -e configs/${NAME[$x]}-commands.ini ]; then
+      if [ ! -e configs/${NAME[$x]}_commands.ini ]; then
         cp -v ${GAMEDIR}/addons/amxmodx/configs/cmds.ini.def \
-          configs/${NAME[$x]}-commands.ini
+          configs/${NAME[$x]}_commands.ini
       fi
-      ln -sf "${DIR}"/configs/${NAME[$x]}-admins.ini \
+      ln -sf "${DIR}"/configs/${NAME[$x]}_admins.ini \
         ${GAMEDIR}/addons/amxmodx/configs/users.ini
-      ln -sf "${DIR}"/configs/${NAME[$x]}-commands.ini \
+      ln -sf "${DIR}"/configs/${NAME[$x]}_commands.ini \
         ${GAMEDIR}/addons/amxmodx/configs/cmds.ini
       cp ${GAMEDIR}/addons/amxmodx/configs/plugins.ini.def \
         ${GAMEDIR}/addons/amxmodx/configs/plugins.ini
@@ -397,17 +397,17 @@ function steam_start()
       fi
 
       # assemble sourcemod data
-      if [ ! -e configs/${NAME[$x]}-admins.ini ]; then
+      if [ ! -e configs/${NAME[$x]}_admins.ini ]; then
         cp -v ${GAMEDIR}/addons/sourcemod/configs/admins_simple.ini.def \
-          configs/${NAME[$x]}-admins.ini
+          configs/${NAME[$x]}_admins.ini
       fi
-      if [ ! -e configs/${NAME[$x]}-commands.ini ]; then
+      if [ ! -e configs/${NAME[$x]}_commands.ini ]; then
         cp -v ${GAMEDIR}/addons/sourcemod/configs/admin_overrides.cfg.def \
-          configs/${NAME[$x]}-commands.ini
+          configs/${NAME[$x]}_commands.ini
       fi
-      ln -sf "${DIR}"/configs/${NAME[$x]}-admins.ini \
+      ln -sf "${DIR}"/configs/${NAME[$x]}_admins.ini \
         ${GAMEDIR}/addons/sourcemod/configs/admins_simple.ini
-      ln -sf "${DIR}"/configs/${NAME[$x]}-commands.ini \
+      ln -sf "${DIR}"/configs/${NAME[$x]}_commands.ini \
         ${GAMEDIR}/addons/sourcemod/configs/admin_overrides.cfg
       find ${GAMEDIR}/addons/sourcemod -depth -not -name compiled \
         -not -name logs -type d -empty -exec rmdir {} \;
@@ -439,10 +439,10 @@ function steam_start()
       if [ ! -e ${GAMEDIR}/motd_text.txt.def ]; then
         cp ${GAMEDIR}/motd_text.txt ${GAMEDIR}/motd_text.txt.def
       fi
-      if [ ! -e configs/${NAME[$x]}-motd_text.txt ]; then
-        cp ${GAMEDIR}/motd_text.txt.def configs/${NAME[$x]}-motd_text.txt
+      if [ ! -e configs/${NAME[$x]}_motd_text.txt ]; then
+        cp ${GAMEDIR}/motd_text.txt.def configs/${NAME[$x]}_motd_text.txt
       fi
-      ln -sf "${DIR}"/configs/${NAME[$x]}-motd_text.txt ${GAMEDIR}/motd_text.txt
+      ln -sf "${DIR}"/configs/${NAME[$x]}_motd_text.txt ${GAMEDIR}/motd_text.txt
     else
       echo "error: \"${SERV[$x]}\" is not a valid server type, skipping"
       continue
@@ -495,11 +495,11 @@ function steam_start()
     if [ ! -e ${GAMEDIR}/mapcycle.txt.def ]; then
       cp ${GAMEDIR}/mapcycle.txt ${GAMEDIR}/mapcycle.txt.def
     fi
-    if [ ! -e configs/${NAME[$x]}-mapcycle.txt ]; then
-      echo "warning: configs/${NAME[$x]}-mapcycle.txt not found; using default"
-      cp ${GAMEDIR}/mapcycle.txt.def configs/${NAME[$x]}-mapcycle.txt
+    if [ ! -e configs/${NAME[$x]}_mapcycle.txt ]; then
+      echo "warning: configs/${NAME[$x]}_mapcycle.txt not found; using default"
+      cp ${GAMEDIR}/mapcycle.txt.def configs/${NAME[$x]}_mapcycle.txt
     fi
-    ln -sf "${DIR}"/configs/${NAME[$x]}-mapcycle.txt ${GAMEDIR}/mapcycle.txt
+    ln -sf "${DIR}"/configs/${NAME[$x]}_mapcycle.txt ${GAMEDIR}/mapcycle.txt
     read -r STARTMAP < ${GAMEDIR}/mapcycle.txt
     if [ ! -z "${MOTD[$x]}" ]; then
       echo "${MOTD[$x]}" > ${GAMEDIR}/motd.txt

@@ -30,14 +30,14 @@ following attributes:
 
 Example:
 
-NAME[0]="css"
+NAME[0]="cssdm"
 SERV[0]="srcds"
 PORT[0]="27015"
 GAME[0]="cstrike"
-CFGS[0]="+css_server @css_onmap %css_plugins css_tourney_mode"
+CFGS[0]="+cssdm @cssdm-onmap %cssdm-plugins cssdm-tourney-mode"
 OPTS[0]="-nohltv"
 PLGS[0]="ratechecker"
-MOTD[0]="http://myfastdlserver.com/css_motd.html"
+MOTD[0]="http://myfastdlserver.com/cssdm-motd.html"
 DBUG[0]="no"
 
 On server startup, the specified config files and plugins will be symlinked into
@@ -47,12 +47,12 @@ session.
 
 Place configuration files in a directory named 'configs'. An 'autoexec.cfg' and
 a 'bans.cfg' file will be used for settings and bans that apply to all servers.
-A '$NAME-mapcycle.txt' file will be used as the mapcycle for the server, with
+A '$NAME_mapcycle.txt' file will be used as the mapcycle for the server, with
 the first map listed to be added to the startup line "+map" parameter. For users
-who have disabled in-game HTML, a '$NAME-motd_text.txt' is used as a fallback
-for some scrds games. The '$NAME-admins.ini' file is used as the admin/user
+who have disabled in-game HTML, a '$NAME_motd_text.txt' is used as a fallback
+for some scrds games. The '$NAME_admins.ini' file is used as the admin/user
 definitions file, which is either 'users.ini' or 'admins_simple.ini' for amxmodx
-or sourcemod respectively. A file named '$NAME-commands.ini' will be used as the
+or sourcemod respectively. A file named '$NAME_commands.ini' will be used as the
 command definitions/overrides file, which is either 'cmds.ini' for amxmodx, or
 'admin-overrides.cfg' for sourcemod. Required or specified files that are not
 present in 'configs' at run-time will be filled with the defaults or will be
