@@ -54,8 +54,10 @@ for some scrds games. The '$NAME_admins.ini' file is used as the admin/user
 definitions file, which is either 'users.ini' or 'admins_simple.ini' for amxmodx
 or sourcemod respectively. A file named '$NAME_commands.ini' will be used as the
 command definitions/overrides file, which is either 'cmds.ini' for amxmodx, or
-'admin-overrides.cfg' for sourcemod. Required or specified files that are not
-present in 'configs' at run-time will be filled with the defaults or will be
+'admin-overrides.cfg' for sourcemod. Finally, '$NAME_database.cfg' will be used
+as the database definition file for the plugin manager, either 'sql.cfg' for
+amxmodx, or 'databases.cfg' for sourcemod. Required or specified files that are
+not present in 'configs' at run-time will be filled with the defaults or will be
 created blank.
 
 Place plugin files in a directory named 'plugins'. If a sourcemod plugin has a

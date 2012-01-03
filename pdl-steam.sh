@@ -1,6 +1,6 @@
 #!/bin/sh
-# pdl-steam.sh (0.66)
-# Copyright (c) 2008-2011 primarydataloop
+# pdl-steam.sh (0.67)
+# Copyright (c) 2008-2012 primarydataloop
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -262,10 +262,12 @@ function steam_start()
           cp hlstatsx/amxmodx/plugins/hlstatsx_commands_${GAME[$x]}.amxx plugins
         fi
         cp ${PCFG} ${PCFG}.def
-        cp ${GAMEDIR}/addons/amxmodx/configs/plugins.ini \
-          ${GAMEDIR}/addons/amxmodx/configs/plugins.ini.def
         cp ${GAMEDIR}/addons/amxmodx/configs/cmds.ini \
           ${GAMEDIR}/addons/amxmodx/configs/cmds.ini.def
+        cp ${GAMEDIR}/addons/amxmodx/configs/plugins.ini \
+          ${GAMEDIR}/addons/amxmodx/configs/plugins.ini.def
+        cp ${GAMEDIR}/addons/amxmodx/configs/sql.cfg \
+          ${GAMEDIR}/addons/amxmodx/configs/sql.cfg.def
         cp ${GAMEDIR}/addons/amxmodx/configs/users.ini \
           ${GAMEDIR}/addons/amxmodx/configs/users.ini.def
         echo "USE THE HLSTATSX WEB GUI TO DO THE FOLLOWING AND HIT [ENTER]"
@@ -287,10 +289,16 @@ function steam_start()
         cp -v ${GAMEDIR}/addons/amxmodx/configs/cmds.ini.def \
           configs/${NAME[$x]}_commands.ini
       fi
+      if [ ! -e configs/${NAME[$x]}_database.cfg ]; then
+        cp -v ${GAMEDIR}/addons/amxmodx/configs/sql.cfg.def \
+          configs/${NAME[$x]}_database.cfg
+      fi
       ln -sf "${DIR}"/configs/${NAME[$x]}_admins.ini \
         ${GAMEDIR}/addons/amxmodx/configs/users.ini
       ln -sf "${DIR}"/configs/${NAME[$x]}_commands.ini \
         ${GAMEDIR}/addons/amxmodx/configs/cmds.ini
+      ln -sf "${DIR}"/configs/${NAME[$x]}_database.cfg \
+        ${GAMEDIR}/addons/amxmodx/configs/sql.cfg
       cp ${GAMEDIR}/addons/amxmodx/configs/plugins.ini.def \
         ${GAMEDIR}/addons/amxmodx/configs/plugins.ini
       if [ ${GAME[$x]} != valve ]; then
@@ -386,6 +394,8 @@ function steam_start()
           ${GAMEDIR}/addons/sourcemod/configs/admins_simple.ini.def
         cp ${GAMEDIR}/addons/sourcemod/configs/admin_overrides.cfg \
           ${GAMEDIR}/addons/sourcemod/configs/admin_overrides.cfg.def
+        cp ${GAMEDIR}/addons/sourcemod/configs/databases.cfg \
+          ${GAMEDIR}/addons/sourcemod/configs/databases.cfg.def
         echo "USE THE HLSTATSX WEB GUI TO DO THE FOLLOWING AND HIT [ENTER]"
         echo "(web) unhide game ${GAME[$x]}"
         echo "(web) add ${SERV[$x]} server for ${GAME[$x]}"
@@ -405,10 +415,16 @@ function steam_start()
         cp -v ${GAMEDIR}/addons/sourcemod/configs/admin_overrides.cfg.def \
           configs/${NAME[$x]}_commands.ini
       fi
+      if [ ! -e configs/${NAME[$x]}_database.cfg ]; then
+        cp -v ${GAMEDIR}/addons/sourcemod/configs/databases.cfg.def \
+          configs/${NAME[$x]}_database.cfg
+      fi
       ln -sf "${DIR}"/configs/${NAME[$x]}_admins.ini \
         ${GAMEDIR}/addons/sourcemod/configs/admins_simple.ini
       ln -sf "${DIR}"/configs/${NAME[$x]}_commands.ini \
         ${GAMEDIR}/addons/sourcemod/configs/admin_overrides.cfg
+      ln -sf "${DIR}"/configs/${NAME[$x]}_database.cfg \
+        ${GAMEDIR}/addons/sourcemod/configs/databases.cfg
       find ${GAMEDIR}/addons/sourcemod -depth -not -name compiled \
         -not -name logs -type d -empty -exec rmdir {} \;
       for FILE in hlstatsx ${PLGS[$x]}; do
