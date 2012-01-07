@@ -1,5 +1,5 @@
 #!/bin/sh
-# pdl-steam.sh (0.67)
+# pdl-steam.sh (0.68)
 # Copyright (c) 2008-2012 primarydataloop
 
 # This program is free software: you can redistribute it and/or modify
@@ -322,6 +322,7 @@ function steam_start()
         sed -i -e "s/amxx_logging\t0/amxx_logging\t1/" \
           ${GAMEDIR}/addons/amxmodx/configs/core.ini
       fi
+      chmod 700 ${GAMEDIR}/addons/amxmodx/configs
 
       # hlds configuration specifics
       BANFILE=banned.cfg
@@ -446,6 +447,7 @@ function steam_start()
         sed -i -e "s/Logging\"\t\t\"off\"/Logging\"\t\t\"on\"/" \
           ${GAMEDIR}/addons/sourcemod/configs/core.cfg
       fi
+      chmod 700 ${GAMEDIR}/addons/sourcemod/configs
 
       # srcds configuration specifics
       BANFILE=banned_user.cfg
