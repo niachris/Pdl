@@ -591,5 +591,5 @@ stop)
   steam_stop
   ;;
 *)
-  echo "usage: ${0} start|restart|status|drop"
+  echo "usage: ${0} start|restart|status|stop"
 esac
