@@ -1,5 +1,5 @@
 #!/bin/sh
-# pdl-steam.sh (0.69)
+# pdl-steam.sh (0.70)
 # Copyright (c) 2008-2012 primarydataloop
 
 # This program is free software: you can redistribute it and/or modify
@@ -307,13 +307,13 @@ function steam_start()
       find ${GAMEDIR}/addons/amxmodx -depth -not -name compiled \
         -not -name logs -type d -empty -exec rmdir {} \;
       for FILE in ${PLGS[$x]}; do
+        if [ -e plugins/${FILE}.sma ]; then
+          ln -sf "${DIR}"/plugins/${FILE}.sma \
+            ${GAMEDIR}/addons/amxmodx/scripting
+        fi
         if [ -e plugins/${FILE}.amxx ]; then
           ln -s "${DIR}"/plugins/${FILE}.amxx ${GAMEDIR}/addons/amxmodx/plugins
           echo "${FILE}.amxx" >> ${GAMEDIR}/addons/amxmodx/configs/plugins.ini
-          if [ -e plugins/${FILE}.sma ]; then
-            ln -sf "${DIR}"/plugins/${FILE}.sma \
-              ${GAMEDIR}/addons/amxmodx/scripting
-          fi
         elif [ -d plugins/${FILE} ]; then
           lndir -silent "${DIR}"/plugins/${FILE} ${GAMEDIR}
         else
@@ -433,15 +433,15 @@ function steam_start()
       find ${GAMEDIR}/addons/sourcemod -depth -not -name compiled \
         -not -name logs -type d -empty -exec rmdir {} \;
       for FILE in hlstatsx ${PLGS[$x]}; do
+        if [ -e plugins/${FILE}.sp ]; then
+          ln -sf "${DIR}"/plugins/${FILE}.sp \
+            ${GAMEDIR}/addons/sourcemod/scripting
+        fi
         if [ -e plugins/${FILE}.smx ]; then
           ln -sf "${DIR}"/plugins/${FILE}.smx ${GAMEDIR}/addons/sourcemod/plugins
           if [ -e plugins/${FILE}.phrases.txt ]; then
             ln -sf "${DIR}"/plugins/${FILE}.phrases.txt \
               ${GAMEDIR}/addons/sourcemod/translations
-          fi
-          if [ -e plugins/${FILE}.sp ]; then
-            ln -sf "${DIR}"/plugins/${FILE}.sp \
-              ${GAMEDIR}/addons/sourcemod/scripting
           fi
         elif [ -d plugins/${FILE} ]; then
           lndir -silent "${DIR}"/plugins/${FILE} ${GAMEDIR}
