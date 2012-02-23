@@ -1,5 +1,5 @@
 #!/bin/sh
-# pdl-steam.sh (0.70)
+# pdl-steam.sh (0.71)
 # Copyright (c) 2008-2012 primarydataloop
 
 # This program is free software: you can redistribute it and/or modify
@@ -142,7 +142,8 @@ function steam_start()
     | crontab -
 
   # backup hlstatsx database weekly
-  if [ ! -z $(find hlstatsx -name 20*_backup.sql -mtime +7) ]; then
+  if [ ! -z $(find hlstatsx -name 20*_backup.sql -mtime +7) ] \
+  || [ ! -e hlstatsx/20*_backup.sql ]; then
     backup_database
   fi
 

@@ -1,3 +1,5 @@
+pdl-steam (0.71) README
+
 pdl-steam will install, update, and run an hlstatsx site and multiple hlds or
 srcds based game servers along with their associated plugin managers. It reads
 settings and server definitions from 'pdl-steam.conf' that consist of the
