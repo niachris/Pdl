@@ -1,5 +1,5 @@
 #!/bin/sh
-# pdl-steam.sh (0.71)
+# pdl-steam.sh (0.72)
 # Copyright (c) 2008-2012 primarydataloop
 
 # This program is free software: you can redistribute it and/or modify
@@ -46,7 +46,7 @@ function steam_start()
     echo "error: pdl-steam is already running"
     exit 1
   fi
-  source ./pdl-steam.conf || exit 1
+  source pdl-steam.conf || exit 1
   chmod 600 pdl-steam.conf
   mkdir -p configs hlstatsx plugins
   chmod 700 configs
@@ -123,23 +123,32 @@ function steam_start()
     fi
   fi
 
-  # handle web link and permissions
+  # handle hlstatsx web link and permissions
   if [ ! -e /var/www/htdocs/hlstatsx ]; then
     echo "ENTER ROOT PASSWORD TO CREATE HLSTATSX WEB LINK"
-    sudo ln -s ${DIR}/hlstatsx/web /var/www/htdocs/hlstatsx
+    sudo ln -sf ${DIR}/hlstatsx/web /var/www/htdocs/hlstatsx
   fi
   if [ $(stat -c %G hlstatsx/web/config.php) != apache ] ; then
     echo "ENTER ROOT PASSWORD TO PROTECT HLSTATSX WEB CONFIGURATION"
     sudo chown ${USER}:apache ${DIR}/hlstatsx/web/config.php
   fi
 
-  # add/update hlstatsx awards crontab entry
-  if [ -z "$(crontab -l)" ]; then
+  # add hlstatsx awards crontab entry
+  if ! crontab -l | grep -q hlstatsx; then
     echo hlstat | crontab -
   fi
   crontab -l | sed -e \
-    's!.*hlstat.*!00 00 * * * cd '${DIR}'/hlstatsx/scripts \&\& ./hlstats-awards.pl!' \
+    's!.*hlstat.*!00 00 * * * cd '${DIR}'/hlstatsx/scripts \&\& ./hlstats-awards.pl \&\& touch hlstats-awards.pl!' \
     | crontab -
+
+  # run hlstatsx awards script if it hasn't already today
+  ( cd hlstatsx/scripts
+    if [ $(stat -c %Y hlstats-awards.pl) -lt $(date -d 12:00 +%s) ]; then
+      echo "running hlstatsx awards script..."
+      ./hlstats-awards.pl 1> /dev/null
+      touch hlstats-awards.pl
+    fi
+  )
 
   # backup hlstatsx database weekly
   if [ ! -z $(find hlstatsx -name 20*_backup.sql -mtime +7) ] \
@@ -158,12 +167,14 @@ function steam_start()
   rm -f hlstatsx/scripts/logs/*
 
   # start hlstatsx daemon
-  if [ -e hlstatsx/scripts/run_hlstats ]; then
-    ( cd hlstatsx/scripts
-      echo "starting hlstatsx daemon..."
-      ./run_hlstats start 1> /dev/null
-    )
-  fi
+  ( cd hlstatsx/scripts
+    echo "starting hlstatsx daemon..."
+    ./run_hlstats start 1> /dev/null
+  )
+
+  # make link for steam data
+  mkdir -p "${DIR}"/Steam
+  ln -sf "${DIR}"/Steam ${HOME}
 
   # install steam, and update the bootstrapper
   if [ ! -e steam ]; then
@@ -174,7 +185,6 @@ function steam_start()
     rm -f hldsupdatetool.bin readme.txt test1.so test2.so test3.so
   fi
   ./steam -command list > /dev/null 2>&1
-  STEAM_BIN="${DIR}"/steam
 
   # get default ip address
   IP=$(/sbin/ifconfig eth0 | \
@@ -229,7 +239,7 @@ function steam_start()
           echo "error: \"${GAME[$x]}\" not valid game for hlds"
           continue
         fi
-        sed -i -e "s#\.\/steam#${STEAM_BIN}#" hlds/hlds_run
+        sed -i -e "s#\.\/steam#${DIR}/steam#" hlds/hlds_run
         FIRST_RUN=yes
       fi
       find ${GAMEDIR} -type l -exec rm {} \;
@@ -552,7 +562,7 @@ function steam_start()
     fi
     rm -f ${GAMEDIR}/downloads/*
     ( cd ${SERV[$x]}/${OB}
-      screen -dmS steam_${NAME[$x]} ./${SERV[$x]}_run -steambin "${STEAM_BIN}" \
+      screen -dmS steam_${NAME[$x]} ./${SERV[$x]}_run -steambin "${DIR}"/steam \
         -autoupdate +ip 0.0.0.0 -port ${PORT[$x]} -game ${GAME[$x]} \
         ${OPTS[$x]} +sv_lan 0 +map ${STARTMAP}
     )
@@ -567,14 +577,22 @@ function steam_status()
 
 function steam_stop()
 {
+  # kill servers
   killall -qvw hlds_run && sleep 2
   killall -qvw srcds_run && sleep 2
+
+  # stop hlstatsx daemon
   if [ -e hlstatsx/scripts/run_hlstats ]; then
     ( cd hlstatsx/scripts
       ./run_hlstats stop 1> /dev/null && echo "stopped hlstatsx daemon"
     )
   fi
-  rm -f pdl-steam.pid
+
+  # remove hlstatsx crontab entry
+  crontab -l | sed -e "/hlstatsx/d" | crontab -
+
+  # remove pid and steam data link
+  rm -f pdl-steam.pid ${HOME}/Steam
 }
 
 case ${1} in
@@ -592,5 +610,5 @@ stop)
   steam_stop
   ;;
 *)
-  echo "usage: ${0} start|restart|status|stop"
+  echo "${0} start|restart|status|stop"
 esac
