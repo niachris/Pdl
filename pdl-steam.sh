@@ -1,5 +1,5 @@
 #!/bin/sh
-# pdl-steam.sh (0.72)
+# pdl-steam.sh (0.73)
 # Copyright (c) 2008-2012 primarydataloop
 
 # This program is free software: you can redistribute it and/or modify
@@ -143,7 +143,7 @@ function steam_start()
 
   # run hlstatsx awards script if it hasn't already today
   ( cd hlstatsx/scripts
-    if [ $(stat -c %Y hlstats-awards.pl) -lt $(date -d 12:00 +%s) ]; then
+    if [ $(stat -c %Y hlstats-awards.pl) -lt $(date -d 00:00 +%s) ]; then
       echo "running hlstatsx awards script..."
       ./hlstats-awards.pl 1> /dev/null
       touch hlstats-awards.pl
