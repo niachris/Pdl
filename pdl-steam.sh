@@ -1,5 +1,5 @@
 #!/bin/sh
-# pdl-steam.sh (0.73)
+# pdl-steam.sh (0.74)
 # Copyright (c) 2008-2012 primarydataloop
 
 # This program is free software: you can redistribute it and/or modify
@@ -173,16 +173,18 @@ function steam_start()
   )
 
   # make link for steam data
-  mkdir -p "${DIR}"/Steam
+  mkdir -p Steam
   ln -sf "${DIR}"/Steam ${HOME}
 
   # install steam, and update the bootstrapper
   if [ ! -e steam ]; then
     wget -nv http://steampowered.com/download/hldsupdatetool.bin || exit 1
     chmod +x hldsupdatetool.bin
-    echo yes | ./hldsupdatetool.bin
-    ./steam ; ./steam
-    rm -f hldsupdatetool.bin readme.txt test1.so test2.so test3.so
+    echo yes | ./hldsupdatetool.bin 1> /dev/null
+    ./steam
+    ./steam
+    rm -f hldsupdatetool.bin readme.txt test1.so test2.so test3.so \
+      ${HOME}/.steam
   fi
   ./steam -command list > /dev/null 2>&1
 
@@ -331,10 +333,11 @@ function steam_start()
           echo "warning: plugins/${FILE}.amxx not found"
         fi
       done
-      sed -i -e "s/amxx_logging\t1/amxx_logging\t0/" \
-        ${GAMEDIR}/addons/amxmodx/configs/core.ini
       if [ ${DBUG[$x]} = yes ]; then
         sed -i -e "s/amxx_logging\t0/amxx_logging\t1/" \
+          ${GAMEDIR}/addons/amxmodx/configs/core.ini
+      else
+        sed -i -e "s/amxx_logging\t1/amxx_logging\t0/" \
           ${GAMEDIR}/addons/amxmodx/configs/core.ini
       fi
       chmod 700 ${GAMEDIR}/addons/amxmodx/configs
@@ -460,10 +463,11 @@ function steam_start()
           echo "warning: plugins/${FILE}.smx not found"
         fi
       done
-      sed -i -e "s/Logging\"\t\t\"on\"/Logging\"\t\t\"off\"/" \
-        ${GAMEDIR}/addons/sourcemod/configs/core.cfg
       if [ ${DBUG[$x]} = yes ]; then
         sed -i -e "s/Logging\"\t\t\"off\"/Logging\"\t\t\"on\"/" \
+          ${GAMEDIR}/addons/sourcemod/configs/core.cfg
+      else
+        sed -i -e "s/Logging\"\t\t\"on\"/Logging\"\t\t\"off\"/" \
           ${GAMEDIR}/addons/sourcemod/configs/core.cfg
       fi
       chmod 700 ${GAMEDIR}/addons/sourcemod/configs
