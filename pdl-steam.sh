@@ -1,5 +1,5 @@
 #!/bin/sh
-# pdl-steam.sh (0.74)
+# pdl-steam.sh (0.75)
 # Copyright (c) 2008-2012 primarydataloop
 
 # This program is free software: you can redistribute it and/or modify
@@ -40,36 +40,32 @@ function steam_start()
     fi
   done
   if [ ! -w "${DIR}" ]; then
-    echo "fatal: ${DIR} is not writable"
+    echo "fatal, ${DIR} is not writable"
     exit 1
   elif [ -e pdl-steam.pid ]; then
-    echo "error: pdl-steam is already running"
+    echo "fatal, pdl-steam is already running"
     exit 1
   fi
   source pdl-steam.conf || exit 1
   chmod 600 pdl-steam.conf
   mkdir -p configs hlstatsx plugins
   chmod 700 configs
-  if [ ! -e configs/autoexec.cfg ]; then
-    echo -e "// autoexec.cfg\n" > configs/autoexec.cfg
-  fi
-  if [ ! -e configs/bans.cfg ]; then
-    echo -e "// bans.cfg\n" > configs/bans.cfg
-  fi
   touch pdl-steam.pid
 
   # install/update hlstatsx
-  HLX=1.6.15
-  if [ ! -e hlstatsx/HLXCommunityEdition${HLX}FULL.zip ]; then
-    if [ -e hlstatsx/HLXCommunityEdition*FULL.zip ]; then
+  HLX=1.6.17
+  if [ ! -e hlstatsx/HLXCE-${HLX}-FULL.zip ]; then
+    if [ -e hlstatsx/HLXCE-*-FULL.zip ]; then
       OLD_HLX=yes
     fi
     rm -fr hlstatsx/*
-    wget hlstatsxcommunity.googlecode.com/files/HLXCommunityEdition${HLX}FULL.zip \
-      -O hlstatsx/HLXCommunityEdition${HLX}FULL.zip || exit 1
-    unzip -q hlstatsx/HLXCommunityEdition${HLX}FULL.zip -d hlstatsx
+    wget hlstatsxcommunity.googlecode.com/files/HLXCE-${HLX}-FULL.zip \
+      -O hlstatsx/HLXCE-${HLX}-FULL.zip || exit 1
+    unzip -q hlstatsx/HLXCE-${HLX}-FULL.zip -d hlstatsx
+    mv hlstatsx/hlxce-${HLX}/* hlstatsx
+    rmdir hlstatsx/hlxce-${HLX}
   fi
-  chmod 444 hlstatsx/HLXCommunityEdition${HLX}FULL.zip
+  chmod 444 hlstatsx/HLXCE-${HLX}-FULL.zip
   cp hlstatsx/sourcemod/plugins/hlstatsx.smx plugins
 
   # configure hlstatsx
@@ -97,6 +93,16 @@ function steam_start()
   rm hlstatsx/web/config.php.tmp
   chmod 640 hlstatsx/web/config.php
 
+  # handle hlstatsx web link and permissions
+  if [ ! -e /var/www/htdocs/hlstatsx ]; then
+    echo "ENTER ROOT PASSWORD TO CREATE HLSTATSX WEB LINK"
+    sudo ln -sf ${DIR}/hlstatsx/web /var/www/htdocs/hlstatsx
+  fi
+  if [ $(stat -c %G hlstatsx/web/config.php) != apache ] ; then
+    echo "ENTER ROOT PASSWORD TO PROTECT HLSTATSX WEB CONFIGURATION"
+    sudo chown ${USER}:apache ${DIR}/hlstatsx/web/config.php
+  fi
+
   # update/create hlstatsx database
   if [ -d hlstatsx/web/updater ]; then
     if [ ! -z ${OLD_HLX} ]; then
@@ -121,16 +127,6 @@ function steam_start()
       echo "(web) set to geoip lookup via database"
       read PAUSE
     fi
-  fi
-
-  # handle hlstatsx web link and permissions
-  if [ ! -e /var/www/htdocs/hlstatsx ]; then
-    echo "ENTER ROOT PASSWORD TO CREATE HLSTATSX WEB LINK"
-    sudo ln -sf ${DIR}/hlstatsx/web /var/www/htdocs/hlstatsx
-  fi
-  if [ $(stat -c %G hlstatsx/web/config.php) != apache ] ; then
-    echo "ENTER ROOT PASSWORD TO PROTECT HLSTATSX WEB CONFIGURATION"
-    sudo chown ${USER}:apache ${DIR}/hlstatsx/web/config.php
   fi
 
   # add hlstatsx awards crontab entry
@@ -173,6 +169,11 @@ function steam_start()
   )
 
   # make link for steam data
+  if [ -e ${HOME}/Steam ] \
+  && [ $(readlink ${HOME}/Steam) != "${DIR}"/Steam ]; then
+    print "fatal, ${HOME}/Steam claimed"
+    exit 1
+  fi
   mkdir -p Steam
   ln -sf "${DIR}"/Steam ${HOME}
 
@@ -182,11 +183,9 @@ function steam_start()
     chmod +x hldsupdatetool.bin
     echo yes | ./hldsupdatetool.bin 1> /dev/null
     ./steam
-    ./steam
-    rm -f hldsupdatetool.bin readme.txt test1.so test2.so test3.so \
-      ${HOME}/.steam
   fi
   ./steam -command list > /dev/null 2>&1
+  rm -f hldsupdatetool.bin readme.txt test*.so ${HOME}/.steam
 
   # get default ip address
   IP=$(/sbin/ifconfig eth0 | \
@@ -200,29 +199,29 @@ function steam_start()
   for ((x=0; x < ${#NAME[*]}; x++)); do
     NAME[$x]=$(echo ${NAME[$x]} | sed -e "s/ /_/g" -e "s/,/ /g")
     if [ -z ${NAME[$x]} ]; then
-      echo "error: empty \$NAME"
+      echo "error, empty \$NAME"
       continue
     elif [[ ${USED_NAME} == *,${NAME[$x]},* ]]; then
-      echo "error: name in use, skipping: ${NAME[$x]}"
+      echo "error, name in use, skipping ${NAME[$x]}"
       continue
     elif [ -z ${SERV[$x]} ]; then
-      echo "error: missing \$SERV, skipping: ${NAME[$x]}"
+      echo "error, missing \$SERV, skipping ${NAME[$x]}"
       continue
     elif [ -z ${PORT[$x]} ]; then
-      echo "error: missing \$PORT, skipping: ${NAME[$x]}"
+      echo "error, missing \$PORT, skipping ${NAME[$x]}"
       continue
     elif [[ ${USED_PORT} == *,${PORT[$x]},* ]]; then
-      echo "error: port ${PORT[$x]} in use, skipping: ${NAME[$x]}"
+      echo "error, port ${PORT[$x]} in use, skipping ${NAME[$x]}"
       continue
     elif [ -z ${GAME[$x]} ]; then
-      echo "error: missing \$GAME, skipping: ${NAME[$x]}"
+      echo "error, missing \$GAME, skipping ${NAME[$x]}"
       continue
     fi
     unset EXEC FIRST_RUN
 
     if [ ${SERV[$x]} = hlds ]; then
       if [[ ${USED_HGAM} == *,${GAME[$x]},* ]]; then
-        echo "error: a ${GAME[$x]} server is already up, skipping: ${NAME[$x]}"
+        echo "error, a ${GAME[$x]} server is already up, skipping ${NAME[$x]}"
         continue
       fi
 
@@ -238,7 +237,7 @@ function steam_start()
         elif [ ${GAME[$x]} = valve ]; then
           ./steam -command update -game valve -dir hlds
         else
-          echo "error: \"${GAME[$x]}\" not valid game for hlds"
+          echo "error, \"${GAME[$x]}\" not valid game for hlds"
           continue
         fi
         sed -i -e "s#\.\/steam#${DIR}/steam#" hlds/hlds_run
@@ -261,10 +260,9 @@ function steam_start()
       AM=1.8.1
       PCFG=${GAMEDIR}/addons/amxmodx/configs/amxx.cfg
       if [ ! -e ${GAMEDIR}/amxmodx-${AM}-base.tar.gz ]; then
-        rm -f ${GAMEDIR}/amxmodx-*-*.tar.gz
+        rm -f ${GAMEDIR}/amxmodx-*-*.tar.gz ${GAMEDIR}/addons/amxmodx
         wget sf.net/projects/amxmodx/files/amxmodx-${AM}-base.tar.gz \
           -O ${GAMEDIR}/amxmodx-${AM}-base.tar.gz || exit 1
-        rm -fr ${GAMEDIR}/addons/amxmodx
         tar -xzf ${GAMEDIR}/amxmodx-${AM}-base.tar.gz -C ${GAMEDIR}
         echo "linux addons/amxmodx/dlls/amxmodx_mm_i386.so" \
           > ${GAMEDIR}/addons/metamod/plugins.ini
@@ -330,7 +328,7 @@ function steam_start()
         elif [ -d plugins/${FILE} ]; then
           lndir -silent "${DIR}"/plugins/${FILE} ${GAMEDIR}
         else
-          echo "warning: plugins/${FILE}.amxx not found"
+          echo "warning, plugins/${FILE}.amxx not found"
         fi
       done
       if [ ${DBUG[$x]} = yes ]; then
@@ -348,7 +346,7 @@ function steam_start()
       echo "logaddress_add ${IP} 27500" > ${GAMEDIR}/server.cfg
     elif [ ${SERV[$x]} = srcds ]; then
       if [[ ${USED_SGAM} == *,${GAME[$x]},* ]]; then
-        echo "error: a ${GAME[$x]} server is already up, skipping: ${NAME[$x]}"
+        echo "error, a ${GAME[$x]} server is already up, skipping ${NAME[$x]}"
         continue
       fi
 
@@ -377,7 +375,7 @@ function steam_start()
       elif [ ${GAME[$x]} = zps ]; then
         INST=zps
       else
-        echo "error: \"${GAME[$x]}\" not valid game for srcds"
+        echo "error, \"${GAME[$x]}\" not valid game for srcds"
         continue
       fi
       GAMEDIR=${SERV[$x]}/${OB}${GAME[$x]}
@@ -400,13 +398,13 @@ function steam_start()
         wget -nv www.sourcemm.net/vdf?vdf_game=${GAME[$x]} \
           -O ${GAMEDIR}/addons/metamod.vdf || exit 1
       fi
-      SM=1.4.1
+      SM=1.4.4
       PCFG=${GAMEDIR}/cfg/sourcemod/sourcemod.cfg
       if [ ! -e ${GAMEDIR}/sourcemod-${SM}-linux.tar.gz ]; then
-        rm -f ${GAMEDIR}/sourcemod-*-linux.tar.gz
+        rm -fr ${GAMEDIR}/sourcemod-*-linux.tar.gz ${GAMEDIR}/cfg/sourcemod \
+          ${GAMEDIR}/addons/sourcemod
         wget www.n00bsalad.net/sourcemodmirror/sourcemod-${SM}-linux.tar.gz \
           -O ${GAMEDIR}/sourcemod-${SM}-linux.tar.gz || exit 1
-        rm -fr ${GAMEDIR}/cfg/sourcemod ${GAMEDIR}/addons/sourcemod
         tar -xzf ${GAMEDIR}/sourcemod-${SM}-linux.tar.gz -C ${GAMEDIR}
         cp ${PCFG} ${PCFG}.def
         cp ${GAMEDIR}/addons/sourcemod/configs/admins_simple.ini \
@@ -460,7 +458,7 @@ function steam_start()
         elif [ -d plugins/${FILE} ]; then
           lndir -silent "${DIR}"/plugins/${FILE} ${GAMEDIR}
         else
-          echo "warning: plugins/${FILE}.smx not found"
+          echo "warning, plugins/${FILE}.smx not found"
         fi
       done
       if [ ${DBUG[$x]} = yes ]; then
@@ -485,7 +483,7 @@ function steam_start()
       fi
       ln -sf "${DIR}"/configs/${NAME[$x]}_motd_text.txt ${GAMEDIR}/motd_text.txt
     else
-      echo "error: \"${SERV[$x]}\" is not a valid server type, skipping"
+      echo "error, \"${SERV[$x]}\" is an invalid server, skipping ${NAME[$x]}"
       continue
     fi
 
@@ -493,7 +491,13 @@ function steam_start()
     chmod 444 ${GAMEDIR}/*.tar.gz
 
     # assemble configuration
+    if [ ! -e configs/autoexec.cfg ]; then
+      echo -e "// autoexec.cfg\n" > configs/autoexec.cfg
+    fi
     cp configs/autoexec.cfg ${GAMEDIR}/${CFGDIR}
+    if [ ! -e configs/bans.cfg ]; then
+      echo -e "// bans.cfg\n" > configs/bans.cfg
+    fi
     ln -sf "${DIR}"/configs/bans.cfg ${GAMEDIR}/${CFGDIR}/${BANFILE}
     {
       echo "exec ${BANFILE}"
@@ -509,11 +513,11 @@ function steam_start()
     CFGS[$x]=$(echo ${CFGS[$x]} | sed -e "s/.cfg/ /g")
     for FILE in ${CFGS[$x]}; do
       if [ ${FILE} = autoexec ]; then
-        echo "warning: autoexec.cfg is a reserved filename, skipping"
+        echo "warning, autoexec.cfg is a reserved filename"
         continue
       fi
       if [ ${FILE} = server ]; then
-        echo "warning: server.cfg is a reserved filename, skipping"
+        echo "warning, server.cfg is a reserved filename"
         continue
       fi
       if [ ${FILE:0:1} = + ]; then
@@ -528,7 +532,7 @@ function steam_start()
       fi
       if [ ! -e configs/${FILE}.cfg ]; then
         echo "//" > configs/${FILE}.cfg
-        echo "warning: configs/${FILE}.cfg not found; creating blank file"
+        echo "warning, configs/${FILE}.cfg not found, creating blank file"
       fi
       ln -s "${DIR}"/configs/${FILE}.cfg ${GAMEDIR}/${CFGDIR}
     done
@@ -537,7 +541,7 @@ function steam_start()
       cp ${GAMEDIR}/mapcycle.txt ${GAMEDIR}/mapcycle.txt.def
     fi
     if [ ! -e configs/${NAME[$x]}_mapcycle.txt ]; then
-      echo "warning: configs/${NAME[$x]}_mapcycle.txt not found; using default"
+      echo "warning, configs/${NAME[$x]}_mapcycle.txt not found, using default"
       cp ${GAMEDIR}/mapcycle.txt.def configs/${NAME[$x]}_mapcycle.txt
     fi
     ln -sf "${DIR}"/configs/${NAME[$x]}_mapcycle.txt ${GAMEDIR}/mapcycle.txt
@@ -545,7 +549,7 @@ function steam_start()
     if [ ! -z "${MOTD[$x]}" ]; then
       echo "${MOTD[$x]}" > ${GAMEDIR}/motd.txt
     else
-      echo "warning: motd url not specified; using mapcycle as greeting"
+      echo "warning, motd url not specified, using mapcycle as greeting"
       cp ${GAMEDIR}/mapcycle.txt ${GAMEDIR}/motd.txt
     fi
 
@@ -615,4 +619,5 @@ stop)
   ;;
 *)
   echo "${0} start|restart|status|stop"
+  ;;
 esac

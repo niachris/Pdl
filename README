@@ -1,6 +1,6 @@
-pdl-steam (0.74) README
+pdl-steam (0.75) README
 
-pdl-steam will install, update, and run an hlstatsx site and multiple hlds or
+pdl-steam will install, update, and run an hlstatsx site and multiple hlds and
 srcds based game servers along with their associated plugin managers. It reads
 settings and server definitions from 'pdl-steam.conf' that consist of the
 following attributes:
@@ -42,6 +42,24 @@ PLGS[0]="ratechecker"
 MOTD[0]="http://myfastdlserver.com/cssdm-motd.html"
 DBUG[0]="no"
 
+One hlstatsx instance (which is the perl daemon running on localhost with access
+to a database) is run for all game servers. It responds to the following
+variables:
+
+[DB_HOST]
+  network host for the database server (default: localhost)
+[DB_NAME]
+  name of the database (default: hlstatsx)
+[DB_USER]
+  username for the database (default: hlstatsx)
+[DB_PASS]
+  password for the database (default: hlstatsx)
+
+A number of installation and upgrade operations for hlstatsx will need to be
+performed manually, and so the user is prompted. In addition, a backup of the
+database and an update of geoip data will be performed weekly, or before an
+hlstatsx upgrade.
+
 On server startup, the specified config files and plugins will be symlinked into
 the game directory, so that they can be held and edited conveniently in one
 place. Game content will be updated, and each server starts inside of a screen
@@ -66,24 +84,6 @@ Place plugin files in a directory named 'plugins'. If a sourcemod plugin has a
 translation file (*.phrases.txt'), also place it in the 'plugins' directory.
 If the target is a directory, the directory structure and all contents will be
 symlinked at the game directory.
-
-One hlstatsx instance (which is the perl daemon running on localhost with access
-to a database) is run for all game servers. It responds to the following
-variables:
-
-[DB_HOST]
-  network host for the database server (default: localhost)
-[DB_NAME]
-  name of the database (default: hlstatsx)
-[DB_USER]
-  username for the database (default: hlstatsx)
-[DB_PASS]
-  password for the database (default: hlstatsx)
-
-A number of installation and upgrade operations for hlstatsx will need to be
-performed manually, and so the user is prompted. In addition, a backup of the
-database and an update of geoip data will be performed weekly, or before an
-hlstatsx upgrade.
 
 Server definitions with a port or game already specified for another server will
 be skipped. Configuration files and hlstatsx backups are kept protected from
