@@ -1,5 +1,5 @@
 #!/bin/sh
-# pdl-steam.sh (0.75)
+# pdl-steam.sh (0.76)
 # Copyright (c) 2008-2012 primarydataloop
 
 # This program is free software: you can redistribute it and/or modify
@@ -39,18 +39,31 @@ function steam_start()
       exit 1
     fi
   done
-  if [ ! -w "${DIR}" ]; then
-    echo "fatal, ${DIR} is not writable"
-    exit 1
-  elif [ -e pdl-steam.pid ]; then
+  if [ -e pdl-steam.pid ]; then
     echo "fatal, pdl-steam is already running"
     exit 1
   fi
+  touch pdl-steam.pid
   source pdl-steam.conf || exit 1
   chmod 600 pdl-steam.conf
   mkdir -p configs hlstatsx plugins
-  chmod 700 configs
-  touch pdl-steam.pid
+
+  # install steam, and update the bootstrapper
+  if [ -e ${HOME}/Steam ] \
+  && [ $(readlink ${HOME}/Steam) != "${DIR}"/Steam ]; then
+    echo "fatal, ${HOME}/Steam claimed"
+    exit 1
+  fi
+  mkdir -p Steam
+  ln -sf "${DIR}"/Steam ${HOME}
+  if [ ! -e steam ]; then
+    wget -nv http://steampowered.com/download/hldsupdatetool.bin || exit 1
+    chmod +x hldsupdatetool.bin
+    echo yes | ./hldsupdatetool.bin 1> /dev/null
+    ./steam
+  fi
+  ./steam -command list > /dev/null 2>&1
+  rm -f hldsupdatetool.bin readme.txt test*.so ${HOME}/.steam
 
   # install/update hlstatsx
   HLX=1.6.17
@@ -65,7 +78,6 @@ function steam_start()
     mv hlstatsx/hlxce-${HLX}/* hlstatsx
     rmdir hlstatsx/hlxce-${HLX}
   fi
-  chmod 444 hlstatsx/HLXCE-${HLX}-FULL.zip
   cp hlstatsx/sourcemod/plugins/hlstatsx.smx plugins
 
   # configure hlstatsx
@@ -167,25 +179,6 @@ function steam_start()
     echo "starting hlstatsx daemon..."
     ./run_hlstats start 1> /dev/null
   )
-
-  # make link for steam data
-  if [ -e ${HOME}/Steam ] \
-  && [ $(readlink ${HOME}/Steam) != "${DIR}"/Steam ]; then
-    print "fatal, ${HOME}/Steam claimed"
-    exit 1
-  fi
-  mkdir -p Steam
-  ln -sf "${DIR}"/Steam ${HOME}
-
-  # install steam, and update the bootstrapper
-  if [ ! -e steam ]; then
-    wget -nv http://steampowered.com/download/hldsupdatetool.bin || exit 1
-    chmod +x hldsupdatetool.bin
-    echo yes | ./hldsupdatetool.bin 1> /dev/null
-    ./steam
-  fi
-  ./steam -command list > /dev/null 2>&1
-  rm -f hldsupdatetool.bin readme.txt test*.so ${HOME}/.steam
 
   # get default ip address
   IP=$(/sbin/ifconfig eth0 | \
@@ -389,21 +382,21 @@ function steam_start()
       find ${GAMEDIR} -type l -exec rm {} \;
 
       # install/update sourcemod
-      MS=1.8.7
+      MS=1.9.0
       if [ ! -e ${GAMEDIR}/mmsource-${MS}-linux.tar.gz ]; then
         rm -f ${GAMEDIR}/mmsource-*-linux.tar.gz
-        wget -nv sourcemod.steamfriends.com/files/mmsource-${MS}-linux.tar.gz \
+        wget -q sourcemod.steamfriends.com/files/mmsource-${MS}-linux.tar.gz \
           -O ${GAMEDIR}/mmsource-${MS}-linux.tar.gz || exit 1
         tar -xzf ${GAMEDIR}/mmsource-${MS}-linux.tar.gz -C ${GAMEDIR}
-        wget -nv www.sourcemm.net/vdf?vdf_game=${GAME[$x]} \
+        wget -q www.sourcemm.net/vdf?vdf_game=${GAME[$x]} \
           -O ${GAMEDIR}/addons/metamod.vdf || exit 1
       fi
-      SM=1.4.4
+      SM=1.4.6
       PCFG=${GAMEDIR}/cfg/sourcemod/sourcemod.cfg
       if [ ! -e ${GAMEDIR}/sourcemod-${SM}-linux.tar.gz ]; then
         rm -fr ${GAMEDIR}/sourcemod-*-linux.tar.gz ${GAMEDIR}/cfg/sourcemod \
           ${GAMEDIR}/addons/sourcemod
-        wget www.n00bsalad.net/sourcemodmirror/sourcemod-${SM}-linux.tar.gz \
+        wget -q www.n00bsalad.net/sourcemodmirror/sourcemod-${SM}-linux.tar.gz \
           -O ${GAMEDIR}/sourcemod-${SM}-linux.tar.gz || exit 1
         tar -xzf ${GAMEDIR}/sourcemod-${SM}-linux.tar.gz -C ${GAMEDIR}
         cp ${PCFG} ${PCFG}.def
@@ -487,10 +480,8 @@ function steam_start()
       continue
     fi
 
-    # protect download tarballs for upgrade detection
-    chmod 444 ${GAMEDIR}/*.tar.gz
-
     # assemble configuration
+    chmod 700 configs
     if [ ! -e configs/autoexec.cfg ]; then
       echo -e "// autoexec.cfg\n" > configs/autoexec.cfg
     fi
