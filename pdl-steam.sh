@@ -1,6 +1,6 @@
 #!/bin/sh
-# pdl-steam.sh (0.76)
-# Copyright (c) 2008-2012 primarydataloop
+# pdl-steam.sh (0.77)
+# Copyright (c) 2008-2013 primarydataloop
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -23,6 +23,7 @@ cd "${DIR}"
 
 function backup_database()
 {
+  # dump database contents to a backup file
   rm -f hlstatsx/20*_backup.sql
   echo "backing up hlstatsx database..."
   mysqldump -h ${DB_HOST} -u ${DB_USER} -p${DB_PASS} ${DB_NAME} \
@@ -59,24 +60,26 @@ function steam_start()
   if [ ! -e steam ]; then
     wget -nv http://steampowered.com/download/hldsupdatetool.bin || exit 1
     chmod +x hldsupdatetool.bin
-    echo yes | ./hldsupdatetool.bin 1> /dev/null
+    echo yes | ./hldsupdatetool.bin > /dev/null || exit 1
     ./steam
   fi
   ./steam -command list > /dev/null 2>&1
-  rm -f hldsupdatetool.bin readme.txt test*.so ${HOME}/.steam
+  rm -f hldsupdatetool.bin readme.txt test*.so
 
   # install/update hlstatsx
-  HLX=1.6.17
+  HLX=1.6.19
   if [ ! -e hlstatsx/HLXCE-${HLX}-FULL.zip ]; then
     if [ -e hlstatsx/HLXCE-*-FULL.zip ]; then
       OLD_HLX=yes
     fi
     rm -fr hlstatsx/*
-    wget hlstatsxcommunity.googlecode.com/files/HLXCE-${HLX}-FULL.zip \
+    wget -nv bitbucket.org/psychonic/hlstatsxce/downloads/HLXCE-${HLX}-FULL.zip \
       -O hlstatsx/HLXCE-${HLX}-FULL.zip || exit 1
     unzip -q hlstatsx/HLXCE-${HLX}-FULL.zip -d hlstatsx
     mv hlstatsx/hlxce-${HLX}/* hlstatsx
     rmdir hlstatsx/hlxce-${HLX}
+    chmod +x hlstatsx/scripts/*.pl
+    chmod +x hlstatsx/scripts/run_hlstats
   fi
   cp hlstatsx/sourcemod/plugins/hlstatsx.smx plugins
 
@@ -108,11 +111,11 @@ function steam_start()
   # handle hlstatsx web link and permissions
   if [ ! -e /var/www/htdocs/hlstatsx ]; then
     echo "ENTER ROOT PASSWORD TO CREATE HLSTATSX WEB LINK"
-    sudo ln -sf ${DIR}/hlstatsx/web /var/www/htdocs/hlstatsx
+    sudo ln -sf "${DIR}"/hlstatsx/web /var/www/htdocs/hlstatsx
   fi
   if [ $(stat -c %G hlstatsx/web/config.php) != apache ] ; then
     echo "ENTER ROOT PASSWORD TO PROTECT HLSTATSX WEB CONFIGURATION"
-    sudo chown ${USER}:apache ${DIR}/hlstatsx/web/config.php
+    sudo chown ${USER}:apache "${DIR}"/hlstatsx/web/config.php
   fi
 
   # update/create hlstatsx database
@@ -125,7 +128,8 @@ function steam_start()
     else
       echo "INPUT MYSQL ROOT PASSWORD:"
       read -s MYSQL_PASS
-      mysql -h ${DB_HOST} -u root -p${MYSQL_PASS} -e "CREATE DATABASE ${DB_NAME}"
+      mysql -h ${DB_HOST} -u root -p${MYSQL_PASS} \
+        -e "CREATE DATABASE ${DB_NAME}"
       mysql -h ${DB_HOST} -u root -p${MYSQL_PASS} ${DB_NAME} \
         < hlstatsx/sql/install.sql
       mysql -h ${DB_HOST} -u root -p${MYSQL_PASS} -e \
@@ -153,7 +157,7 @@ function steam_start()
   ( cd hlstatsx/scripts
     if [ $(stat -c %Y hlstats-awards.pl) -lt $(date -d 00:00 +%s) ]; then
       echo "running hlstatsx awards script..."
-      ./hlstats-awards.pl 1> /dev/null
+      ./hlstats-awards.pl > /dev/null
       touch hlstats-awards.pl
     fi
   )
@@ -177,12 +181,19 @@ function steam_start()
   # start hlstatsx daemon
   ( cd hlstatsx/scripts
     echo "starting hlstatsx daemon..."
-    ./run_hlstats start 1> /dev/null
+    ./run_hlstats start > /dev/null
   )
 
-  # get default ip address
-  IP=$(/sbin/ifconfig eth0 | \
-    sed -n "/^[A-Za-z0-9]/ {N;/dr:/{;s/.*dr://;s/ .*//;p;}}")
+  # get network device ip
+  for DEV in $(cat /proc/net/dev | grep : | cut -d ':' -f 1); do
+    if [ ${DEV} != lo ]; then
+      IP=$(/sbin/ip addr show ${DEV} | grep "inet " | awk '{print $2}' \
+        | sed -e "s/\/.*//")
+      if [ ! -z ${IP} ]; then
+        break
+      fi
+    fi
+  done
 
   # process server definitions
   USED_NAME=,
@@ -239,30 +250,32 @@ function steam_start()
       find ${GAMEDIR} -type l -exec rm {} \;
 
       # install/update metamod and amxmodx
-      MM=1.19
-      if [ ! -e ${GAMEDIR}/metamod-${MM}-linux.tar.gz ]; then
+      MM=sf.net/projects/metamod/files/metamod-1.20-linux.tar.gz
+      if [ ! -e ${GAMEDIR}/${MM##*/} ]; then
+        echo "installing/upgrading metamod..."
         rm -f ${GAMEDIR}/metamod-*-linux.tar.gz
-        wget sf.net/projects/metamod/files/metamod-${MM}-linux.tar.gz \
-          -O ${GAMEDIR}/metamod-${MM}-linux.tar.gz || exit 1
+        wget -q ${MM} || exit 1
+        mv ${MM##*/} ${GAMEDIR}
         mkdir -p ${GAMEDIR}/addons/metamod/dlls
-        tar -xzf ${GAMEDIR}/metamod-${MM}-linux.tar.gz \
-          -C ${GAMEDIR}/addons/metamod/dlls
+        tar -xzf ${GAMEDIR}/${MM##*/} -C ${GAMEDIR}/addons/metamod/dlls
         sed -i -e "s/\"dlls\/[a-z]*/\"addons\/metamod\/dlls\/metamod/" \
           ${GAMEDIR}/liblist.gam
       fi
-      AM=1.8.1
+      AM=sourcemod.steamfriends.com/files/amxmodx-1.8.2-base-linux.tar.gz
       PCFG=${GAMEDIR}/addons/amxmodx/configs/amxx.cfg
-      if [ ! -e ${GAMEDIR}/amxmodx-${AM}-base.tar.gz ]; then
+      if [ ! -e ${GAMEDIR}/${AM##*/} ]; then
+        echo "installing/upgrading amxmodx..."
         rm -f ${GAMEDIR}/amxmodx-*-*.tar.gz ${GAMEDIR}/addons/amxmodx
-        wget sf.net/projects/amxmodx/files/amxmodx-${AM}-base.tar.gz \
-          -O ${GAMEDIR}/amxmodx-${AM}-base.tar.gz || exit 1
-        tar -xzf ${GAMEDIR}/amxmodx-${AM}-base.tar.gz -C ${GAMEDIR}
+        wget -q ${AM} || exit 1
+        mv ${AM##*/} ${GAMEDIR}
+        tar -xzf ${GAMEDIR}/${AM##*/} -C ${GAMEDIR}
         echo "linux addons/amxmodx/dlls/amxmodx_mm_i386.so" \
           > ${GAMEDIR}/addons/metamod/plugins.ini
         if [ ${GAME[$x]} != valve ]; then
-          wget sf.net/projects/amxmodx/files/amxmodx-${AM}-${GAME[$x]}.tar.gz \
-            -O ${GAMEDIR}/amxmodx-${AM}-${GAME[$x]}.tar.gz || exit 1
-          tar -xzf ${GAMEDIR}/amxmodx-${AM}-${GAME[$x]}.tar.gz -C ${GAMEDIR}
+          AM=sourcemod.steamfriends.com/files/amxmodx-1.8.1-${GAME[$x]}-linux.tar.gz
+          wget -q ${AM} || exit 1
+          mv ${AM##*/} ${GAMEDIR}
+          tar -xzf ${GAMEDIR}/${AM##*/} -C ${GAMEDIR}
           cp hlstatsx/amxmodx/plugins/hlstatsx_commands_${GAME[$x]}.amxx plugins
         fi
         cp ${PCFG} ${PCFG}.def
@@ -280,7 +293,7 @@ function steam_start()
         read PAUSE
         ( cd hlstatsx/scripts
           echo "restarting hlstatsx daemon..."
-          ./run_hlstats restart 1> /dev/null
+          ./run_hlstats restart > /dev/null
         )
       fi
 
@@ -337,6 +350,7 @@ function steam_start()
       BANFILE=banned.cfg
       USED_HGAM=${USED_HGAM}${GAME[$x]},
       echo "logaddress_add ${IP} 27500" > ${GAMEDIR}/server.cfg
+
     elif [ ${SERV[$x]} = srcds ]; then
       if [[ ${USED_SGAM} == *,${GAME[$x]},* ]]; then
         echo "error, a ${GAME[$x]} server is already up, skipping ${NAME[$x]}"
@@ -382,23 +396,25 @@ function steam_start()
       find ${GAMEDIR} -type l -exec rm {} \;
 
       # install/update sourcemod
-      MS=1.9.0
-      if [ ! -e ${GAMEDIR}/mmsource-${MS}-linux.tar.gz ]; then
+      MS=www.gsptalk.com/mirror/sourcemod/mmsource-1.9.2-linux.tar.gz
+      if [ ! -e ${GAMEDIR}/${MS##*/} ]; then
+        echo "installing/upgrading metamod:source..."
         rm -f ${GAMEDIR}/mmsource-*-linux.tar.gz
-        wget -q sourcemod.steamfriends.com/files/mmsource-${MS}-linux.tar.gz \
-          -O ${GAMEDIR}/mmsource-${MS}-linux.tar.gz || exit 1
-        tar -xzf ${GAMEDIR}/mmsource-${MS}-linux.tar.gz -C ${GAMEDIR}
+        wget -q ${MS} || exit 1
+        mv ${MS##*/} ${GAMEDIR}
+        tar -xzf ${GAMEDIR}/${MS##*/} -C ${GAMEDIR}
         wget -q www.sourcemm.net/vdf?vdf_game=${GAME[$x]} \
           -O ${GAMEDIR}/addons/metamod.vdf || exit 1
       fi
-      SM=1.4.6
+      SM=www.sourcemod.net/smdrop/1.5/sourcemod-1.5.0-hg3795-linux.tar.gz
       PCFG=${GAMEDIR}/cfg/sourcemod/sourcemod.cfg
-      if [ ! -e ${GAMEDIR}/sourcemod-${SM}-linux.tar.gz ]; then
+      if [ ! -e ${GAMEDIR}/${SM##*/} ]; then
+        echo "installing/upgrading sourcemod..."
         rm -fr ${GAMEDIR}/sourcemod-*-linux.tar.gz ${GAMEDIR}/cfg/sourcemod \
           ${GAMEDIR}/addons/sourcemod
-        wget -q www.n00bsalad.net/sourcemodmirror/sourcemod-${SM}-linux.tar.gz \
-          -O ${GAMEDIR}/sourcemod-${SM}-linux.tar.gz || exit 1
-        tar -xzf ${GAMEDIR}/sourcemod-${SM}-linux.tar.gz -C ${GAMEDIR}
+        wget -q ${SM} || exit 1
+        mv ${SM##*/} ${GAMEDIR}
+        tar -xzf ${GAMEDIR}/${SM##*/} -C ${GAMEDIR}
         cp ${PCFG} ${PCFG}.def
         cp ${GAMEDIR}/addons/sourcemod/configs/admins_simple.ini \
           ${GAMEDIR}/addons/sourcemod/configs/admins_simple.ini.def
@@ -412,7 +428,7 @@ function steam_start()
         read PAUSE
         ( cd hlstatsx/scripts
           echo "restarting hlstatsx daemon..."
-          ./run_hlstats restart 1> /dev/null
+          ./run_hlstats restart > /dev/null
         )
       fi
 
@@ -475,6 +491,7 @@ function steam_start()
         cp ${GAMEDIR}/motd_text.txt.def configs/${NAME[$x]}_motd_text.txt
       fi
       ln -sf "${DIR}"/configs/${NAME[$x]}_motd_text.txt ${GAMEDIR}/motd_text.txt
+
     else
       echo "error, \"${SERV[$x]}\" is an invalid server, skipping ${NAME[$x]}"
       continue
@@ -583,7 +600,7 @@ function steam_stop()
   # stop hlstatsx daemon
   if [ -e hlstatsx/scripts/run_hlstats ]; then
     ( cd hlstatsx/scripts
-      ./run_hlstats stop 1> /dev/null && echo "stopped hlstatsx daemon"
+      ./run_hlstats stop > /dev/null && echo "stopped hlstatsx daemon"
     )
   fi
 
