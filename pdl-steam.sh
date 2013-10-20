@@ -1,5 +1,5 @@
 #!/bin/sh
-# pdl-steam.sh (0.79))
+# pdl-steam.sh (0.79)
 # Copyright (c) 2008-2013 primarydataloop
 
 # This program is free software: you can redistribute it and/or modify
@@ -223,6 +223,7 @@ function steam_start()
       echo "fatal, ${HOME}/Steam claimed"
       exit 1
     fi
+    rm -f ${HOME}/Steam
     ln -sf "${DIR}"/steamcmd ${HOME}/Steam
     STEAM="-steam_dir "${DIR}"/steamcmd -steamcmd_script \
       "${DIR}"/steamcmd/update_${GAME[$x]}.txt"
