@@ -1,5 +1,5 @@
 #!/bin/sh
-# pdl-steam.sh (0.78)
+# pdl-steam.sh (0.79))
 # Copyright (c) 2008-2013 primarydataloop
 
 # This program is free software: you can redistribute it and/or modify
@@ -209,48 +209,23 @@ function steam_start()
       )
     fi
 
-    function link_steam_dir()
-    {
-      # make steam dir link in home
-      if [ -e ${HOME}/Steam ] \
-      && [ "$(readlink ${HOME}/Steam)" != "${DIR}"/${1} ]; then
-        echo "fatal, ${HOME}/Steam claimed"
-        exit 1
-      fi
-      ln -sf "${DIR}"/${1} ${HOME}/Steam
-    }
-
-    function install_steamcmd()
-    {
-      # install steamcmd
-      if [ ! -e steamcmd/steamcmd.sh ]; then
-        echo "installing steamcmd..."
-        mkdir -p steamcmd
-        rm -fr steamcmd/*
-        wget -q media.steampowered.com/client/steamcmd_linux.tar.gz || exit 1
-        tar xzf steamcmd_linux.tar.gz -C steamcmd
-        rm steamcmd_linux.tar.gz
-      fi
-      link_steam_dir steamcmd
-      STEAM="-steam_dir "${DIR}"/steamcmd -steamcmd_script \
-        "${DIR}"/steamcmd/update_${GAME[$x]}.txt"
-    }
-
-    function install_steam()
-    {
-      # install steam and check/update the bootstrapper
-      mkdir -p Steam
-      link_steam_dir Steam
-      if [ ! -e steam ]; then
-        wget -q http://steampowered.com/download/hldsupdatetool.bin || exit 1
-        chmod +x hldsupdatetool.bin
-        echo yes | ./hldsupdatetool.bin > /dev/null || exit 1
-        ./steam
-      fi
-      ./steam -command list > /dev/null 2>&1
-      rm -f hldsupdatetool.bin readme.txt test*.so
-      STEAM="-steambin "${DIR}"/steam"
-    }
+    # install steamcmd
+    if [ ! -e steamcmd/steamcmd.sh ]; then
+      echo "installing steamcmd..."
+      mkdir -p steamcmd
+      rm -fr steamcmd/*
+      wget -q media.steampowered.com/client/steamcmd_linux.tar.gz || exit 1
+      tar xzf steamcmd_linux.tar.gz -C steamcmd
+      rm steamcmd_linux.tar.gz
+    fi
+    if [ -e ${HOME}/Steam ] \
+    && [ "$(readlink ${HOME}/Steam)" != "${DIR}"/steamcmd ]; then
+      echo "fatal, ${HOME}/Steam claimed"
+      exit 1
+    fi
+    ln -sf "${DIR}"/steamcmd ${HOME}/Steam
+    STEAM="-steam_dir "${DIR}"/steamcmd -steamcmd_script \
+      "${DIR}"/steamcmd/update_${GAME[$x]}.txt"
 
     # check hlds used servers
     if [ ${SERV[$x]} = hlds ]; then
@@ -260,7 +235,6 @@ function steam_start()
       fi
 
       # install/update hlds game content
-      install_steamcmd
       GAMEDIR=hlds-${GAME[$x]}/${GAME[$x]}
       if [ ! -d ${GAMEDIR} ]; then
         if [[ cstrike,dod,tfc,valve != *${GAME[$x]}* ]]; then
@@ -389,48 +363,28 @@ function steam_start()
         INST=232330
       elif [ ${GAME[$x]} = dod ]; then
         INST=232290
-      elif [ ${GAME[$x]} = dystopia ]; then
-        INST=dystopia
       elif [ ${GAME[$x]} = hl2mp ]; then
         INST=232370
-      elif [ ${GAME[$x]} = insurgency ]; then
-        INST=insurgency
-      elif [ ${GAME[$x]} = left4dead ]; then
-        INST=left4dead
-        OB=l4d/
       elif [ ${GAME[$x]} = left4dead2 ]; then
         INST=222860
       elif [ ${GAME[$x]} = tf ]; then
         INST=232250
-      elif [ ${GAME[$x]} = zps ]; then
-        INST=zps
-        OB=orangebox
       else
         echo "error, \"${GAME[$x]}\" not valid game for srcds"
         continue
       fi
       GAMEDIR=${SERV[$x]}-${GAME[$x]}/${OB}${GAME[$x]}
-      if [[ ${INST} = [0-9]* ]]; then
-        install_steamcmd
-        if [ ! -e steamcmd/update_${GAME[$x]}.txt ]; then
-          {
-            echo "@ShutdownOnFailedCommand 1"
-            echo "@NoPromptForPassword 1"
-            echo "login anonymous"
-            echo "force_install_dir ../srcds-${GAME[$x]}"
-            echo "app_update ${INST}"
-            echo "quit"
-          } > steamcmd/update_${GAME[$x]}.txt
-          sh steamcmd/steamcmd.sh +login anonymous +force_install_dir \
-            ../srcds-${GAME[$x]} +app_update ${INST} validate +quit
-        fi
-      else
-        install_steam
-        if [ ! -e Steam/update_${GAME[$x]}.txt ]; then
-          touch Steam/update_${GAME[$x]}.txt
-          ./steam -command update -game "${INST}" -dir srcds-${GAME[$x]} \
-            -verify_all
-        fi
+      if [ ! -e steamcmd/update_${GAME[$x]}.txt ]; then
+        {
+          echo "@ShutdownOnFailedCommand 1"
+          echo "@NoPromptForPassword 1"
+          echo "login anonymous"
+          echo "force_install_dir ../srcds-${GAME[$x]}"
+          echo "app_update ${INST}"
+          echo "quit"
+        } > steamcmd/update_${GAME[$x]}.txt
+        sh steamcmd/steamcmd.sh +login anonymous +force_install_dir \
+          ../srcds-${GAME[$x]} +app_update ${INST} validate +quit
       fi
       find ${GAMEDIR} -type l -exec rm {} \;
 
@@ -650,7 +604,14 @@ function steam_stop()
   fi
 
   # remove pid and steam data link
-  rm -f pdl-steam.pid ${HOME}/Steam
+  rm -f pdl-steam.pid
+  if [ -e ${HOME}/Steam ]; then
+    if [ "$(readlink ${HOME}/Steam)" = "${DIR}"/steamcmd ]; then
+      rm -f ${HOME}/Steam
+    else
+      echo "warning, ${HOME}/Steam claimed"
+    fi
+  fi
 }
 
 case ${1} in
